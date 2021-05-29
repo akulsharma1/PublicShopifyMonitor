@@ -184,6 +184,7 @@ func (t *Scraper) Monitor() {
 				
 				if data.Products[0].Title != t.ProductTitle{
 					t.ProductTitle = data.Products[0].Title
+					//if 
 					//t.ImageURL = data.Products[0].Images[0].Src
 					t.Handle = data.Products[0].Handle
 					t.SendWebhook()
