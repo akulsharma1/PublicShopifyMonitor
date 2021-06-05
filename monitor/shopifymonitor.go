@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"encoding/json"
 	"github.com/aiomonitors/godiscord"
+	//"time"
 )
 type Vars struct {
 	Products []struct {
@@ -63,17 +64,28 @@ type Scraper struct {
 
 	ProxyList []string
 
+	AtcLinkCount int
 	ProductTitle string
 	ImageURL string
 	Handle string
+	FirstProdVariant int64
+	ProductPrice string
 }
 var webhook = "https://discord.com/api/webhooks/848075809594802197/HqGi437WTNC1a2ItlKbDZrJb0RJzA8_XryVWwtqMlU988xw_2ajt-jZCLdK_jZzb6uJ7"
 
 func (t *Scraper)SendWebhook() {
-	e := godiscord.NewEmbed(t.ProductTitle, "Website: "+t.BaseURL, t.BaseURL+"products/"+t.Handle)
+	currentTime := time.Now()
+	e := godiscord.NewEmbed(t.ProductTitle, "", t.BaseURL+"products/"+t.Handle)
+	e.SetAuthor(t.BaseURL, "", "")
 	e.SetColor("#00FF00")
 	e.SetThumbnail(t.ImageURL)
-	e.SetFooter("Shopify Monitor • Made by splash#0003", "https://pbs.twimg.com/profile_images/1351753538066546690/bh72m_6R_400x400.png")
+	e.AddField("Price", t.ProductPrice, false)
+	for i := range VariantMaps {
+		e.AddField("Size "+SizeMaps[i], "[ATC]"+ fmt.Sprintf("(%vcart/add?id=%v)", t.BaseURL, VariantMaps[i]), true)
+	}
+
+	//e.AddField("test 1", "[atc]" + fmt.Sprintf("(%vcart/add?id=%v)", t.BaseURL, t.FirstProdVariant), true)
+	e.SetFooter("Written by splash#0003 | "+currentTime.Format("01/02/2006 15:04:05"), "https://pbs.twimg.com/profile_images/1351753538066546690/bh72m_6R_400x400.png")
 	e.SendToWebhook(webhook)
 }
 func VarRequest(url string) {
@@ -136,10 +148,12 @@ func ScrapeVars(url string) {
 	}
 }
 
+var VariantMaps = make(map[int]int64)
+var SizeMaps = make(map[int]string)
 func (t *Scraper) Monitor() {
 	loop:
 		for {
-			req, err := http.NewRequest("GET", t.BaseURL+"products.json?limit=25", nil)
+			req, err := http.NewRequest("GET", t.BaseURL+"products.json?limit=10", nil)
 			if err != nil {
 				fmt.Println(err.Error())
 				break loop
@@ -182,10 +196,20 @@ func (t *Scraper) Monitor() {
 				data := &Vars{}
 				_ = json.Unmarshal([]byte(resp), data)
 				
-				if data.Products[0].Title != t.ProductTitle{
+				//for i := range 
+				if data.Products[0].Variants[0].ID != t.FirstProdVariant {//&& t.FirstProdVariant != 0{
+					for i, value := range data.Products[0].Variants {
+						t.AtcLinkCount++
+						VariantMaps[i] = value.ID
+						SizeMaps[i] = value.Option1
+						//fmt.Println(VariantMaps[i])
+					}
+					t.FirstProdVariant = data.Products[0].Variants[0].ID
 					t.ProductTitle = data.Products[0].Title
-					//if 
-					//t.ImageURL = data.Products[0].Images[0].Src
+					t.ProductPrice = data.Products[0].Variants[0].Price
+					if data.Products[0].Images[0].Src != "" {
+						t.ImageURL = data.Products[0].Images[0].Src
+					}
 					t.Handle = data.Products[0].Handle
 					t.SendWebhook()
 				}
