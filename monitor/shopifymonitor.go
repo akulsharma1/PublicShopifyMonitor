@@ -83,11 +83,10 @@ func (t *Scraper)SendWebhook() {
 	for i := range VariantMaps {
 		e.AddField("Size "+SizeMaps[i], "[ATC]"+ fmt.Sprintf("(%vcart/add?id=%v)", t.BaseURL, VariantMaps[i]), true)
 	}
-
-	//e.AddField("test 1", "[atc]" + fmt.Sprintf("(%vcart/add?id=%v)", t.BaseURL, t.FirstProdVariant), true)
 	e.SetFooter("Written by splash#0003 | "+currentTime.Format("01/02/2006 15:04:05"), "https://pbs.twimg.com/profile_images/1351753538066546690/bh72m_6R_400x400.png")
 	e.SendToWebhook(webhook)
 }
+
 func VarRequest(url string) {
 	req, err := http.NewRequest("GET", url, nil)
 		if err != nil {
@@ -150,6 +149,7 @@ func ScrapeVars(url string) {
 
 var VariantMaps = make(map[int]int64)
 var SizeMaps = make(map[int]string)
+var PreviousData = &Vars{}
 func (t *Scraper) Monitor() {
 	loop:
 		for {
@@ -194,25 +194,49 @@ func (t *Scraper) Monitor() {
 				//fmt.Println("in")
 				resp := string(pageJson)
 				data := &Vars{}
+				//data2 := data
+				//PreviousData = data
 				_ = json.Unmarshal([]byte(resp), data)
 				
-				//for i := range 
-				if data.Products[0].Variants[0].ID != t.FirstProdVariant {//&& t.FirstProdVariant != 0{
-					for i, value := range data.Products[0].Variants {
-						t.AtcLinkCount++
-						VariantMaps[i] = value.ID
-						SizeMaps[i] = value.Option1
-						//fmt.Println(VariantMaps[i])
+				//for i := range
+				
+				for i := range data.Products {
+					fmt.Println(i)
+					if i == 0 {
+						PreviousData = data
+						//fmt.Println(PreviousData)
 					}
-					t.FirstProdVariant = data.Products[0].Variants[0].ID
-					t.ProductTitle = data.Products[0].Title
-					t.ProductPrice = data.Products[0].Variants[0].Price
-					if data.Products[0].Images[0].Src != "" {
-						t.ImageURL = data.Products[0].Images[0].Src
+					if i > 0 {
+						fmt.Println(PreviousData.Products[i].Variants[i].ID)
+						fmt.Println(data.Products[i].Variants[i].ID)
+						//fmt.Println("----")
+						if data.Products[i].Variants[i].ID != PreviousData.Products[i].Variants[i].ID {
+							fmt.Println("in the loop")
+							for j, value := range data.Products[i].Variants {
+								VariantMaps[j] = value.ID
+								SizeMaps[j] = value.Option1
+								//fmt.Println(VariantMaps[i])
+							}
+							t.FirstProdVariant = data.Products[i].Variants[i].ID
+							t.ProductTitle = data.Products[i].Title
+							t.ProductPrice = data.Products[i].Variants[i].Price
+							t.Handle = data.Products[i].Handle
+							
+							/* 
+							if data.Products[0].Images[0].Src != "" {
+								t.ImageURL = data.Products[0].Images[0].Src
+							} */
+							t.SendWebhook()
+						}
 					}
-					t.Handle = data.Products[0].Handle
-					t.SendWebhook()
+					
 				}
+				PreviousData = data
+				/* 
+				if data.Products[0].Variants[0].ID != t.FirstProdVariant {//&& t.FirstProdVariant != 0{
+				
+					
+				} */
 			}
 			time.Sleep(4000*time.Millisecond)
 			
