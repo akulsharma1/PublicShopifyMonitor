@@ -151,8 +151,12 @@ var VariantMaps = make(map[int]int64)
 var SizeMaps = make(map[int]string)
 var PreviousData = &Vars{}
 func (t *Scraper) Monitor() {
+	sum := 0
 	loop:
 		for {
+			if sum == 0 {
+
+			}
 			req, err := http.NewRequest("GET", t.BaseURL+"products.json?limit=10", nil)
 			if err != nil {
 				fmt.Println(err.Error())
@@ -191,56 +195,48 @@ func (t *Scraper) Monitor() {
 			if len(pageJson) <= 0{
 				fmt.Println("Failed parsing page")
 			} else {
-				//fmt.Println("in")
+				
 				resp := string(pageJson)
 				data := &Vars{}
-				//data2 := data
-				//PreviousData = data
 				_ = json.Unmarshal([]byte(resp), data)
 				
-				//for i := range
-				
+				if sum == 0 {
+					PreviousData = data
+				}
 				for i := range data.Products {
-					fmt.Println(i)
 					if i == 0 {
-						PreviousData = data
-						//fmt.Println(PreviousData)
-					}
-					if i > 0 {
-						fmt.Println(PreviousData.Products[i].Variants[i].ID)
-						fmt.Println(data.Products[i].Variants[i].ID)
-						//fmt.Println("----")
-						if data.Products[i].Variants[i].ID != PreviousData.Products[i].Variants[i].ID {
-							fmt.Println("in the loop")
-							for j, value := range data.Products[i].Variants {
-								VariantMaps[j] = value.ID
-								SizeMaps[j] = value.Option1
-								//fmt.Println(VariantMaps[i])
-							}
-							t.FirstProdVariant = data.Products[i].Variants[i].ID
-							t.ProductTitle = data.Products[i].Title
-							t.ProductPrice = data.Products[i].Variants[i].Price
-							t.Handle = data.Products[i].Handle
+						
+					} else {
+						for j := range data.Products[i].Variants {
+							fmt.Println(i)
 							
-							/* 
-							if data.Products[0].Images[0].Src != "" {
-								t.ImageURL = data.Products[0].Images[0].Src
-							} */
-							t.SendWebhook()
+							
+							fmt.Println(PreviousData.Products[i].Variants[j].ID)
+							fmt.Println(data.Products[i].Variants[j].ID)
+							
+							if data.Products[i].Variants[j].ID != PreviousData.Products[i].Variants[j].ID {
+								fmt.Println(data.Products[0])
+								fmt.Println("in the loop")
+								for k, value := range data.Products[i].Variants {
+									VariantMaps[k] = value.ID
+									SizeMaps[k] = value.Option1
+								}
+								t.FirstProdVariant = data.Products[i].Variants[j].ID
+								t.ProductTitle = data.Products[i].Title
+								t.ProductPrice = data.Products[i].Variants[j].Price
+								t.Handle = data.Products[i].Handle
+								t.SendWebhook()
+								fmt.Println("Sent Webhook")
+							} else {
+								break
+							}	
 						}
 					}
-					
 				}
 				PreviousData = data
-				/* 
-				if data.Products[0].Variants[0].ID != t.FirstProdVariant {//&& t.FirstProdVariant != 0{
-				
-					
-				} */
 			}
+			sum++
 			time.Sleep(4000*time.Millisecond)
 			
 		}
-	
-
 }
