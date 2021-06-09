@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"encoding/json"
-	"github.com/aiomonitors/godiscord"
 	//"reflect"
 	//"github.com/stretchr/testify/require"
 	//"github.com/emacampolo/gomparator"
@@ -74,21 +73,9 @@ type Scraper struct {
 	FirstProdVariant int64
 	ProductPrice string
 }
-var webhook = "https://discord.com/api/webhooks/848075809594802197/HqGi437WTNC1a2ItlKbDZrJb0RJzA8_XryVWwtqMlU988xw_2ajt-jZCLdK_jZzb6uJ7"
 
-func (t *Scraper)SendWebhook() {
-	currentTime := time.Now()
-	e := godiscord.NewEmbed(t.ProductTitle, "", t.BaseURL+"products/"+t.Handle)
-	e.SetAuthor(t.BaseURL, "", "")
-	e.SetColor("#00FF00")
-	e.SetThumbnail(t.ImageURL)
-	e.AddField("Price", t.ProductPrice, false)
-	for i := range VariantMaps {
-		e.AddField("Size "+SizeMaps[i], "[ATC]"+ fmt.Sprintf("(%vcart/add?id=%v)", t.BaseURL, VariantMaps[i]), true)
-	}
-	e.SetFooter("Written by splash#0003 | "+currentTime.Format("01/02/2006 15:04:05"), "https://pbs.twimg.com/profile_images/1351753538066546690/bh72m_6R_400x400.png")
-	e.SendToWebhook(webhook)
-}
+
+
 /* 
 func Equal(vx, vy interface{}) bool {
 	if reflect.TypeOf(vx) != reflect.TypeOf(vy) {
@@ -209,10 +196,6 @@ func (t *Scraper) Monitor() {
 	sum := 0
 	loop:
 		for {
-			
-			if sum == 0 {
-
-			}
 			req, err := http.NewRequest("GET", t.BaseURL+"products.json?limit=10", nil)
 			if err != nil {
 				fmt.Println(err.Error())
@@ -236,8 +219,6 @@ func (t *Scraper) Monitor() {
 			}
 			defer resp.Body.Close()
 			pageJson, _ := ioutil.ReadAll(resp.Body)
-			//bytePageHtml := []byte(pageJson)
-			//fmt.Println(string(pageJson))
 			switch resp.StatusCode {
 			case 200:
 				fmt.Println("[200] Monitoring")
@@ -272,11 +253,12 @@ func (t *Scraper) Monitor() {
 							t.ImageURL = data.Products[i].Images[0].Src
 							t.ProductTitle = data.Products[i].Title
 							t.Handle = data.Products[i].Handle
-							t.SendWebhook()
+							t.SendNewProdWebhook()
 						}
-					} else if len(data.Products) == len(PreviousData.Products) {
-
-						fmt.Println("abc")
+					} else if len(data.Products) == 0 && len(PreviousData.Products) > 0 {
+						fmt.Println("in remove webhook")
+						t.SendProductsRemovedWebhook()
+						fmt.Println("Sent webhook")
 					}
 					/* 
 					for i := range data.Products {
