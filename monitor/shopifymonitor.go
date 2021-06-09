@@ -8,6 +8,9 @@ import (
 	"io/ioutil"
 	"encoding/json"
 	"github.com/aiomonitors/godiscord"
+	//"reflect"
+	//"github.com/stretchr/testify/require"
+	//"github.com/emacampolo/gomparator"
 	//"time"
 )
 type Vars struct {
@@ -86,6 +89,58 @@ func (t *Scraper)SendWebhook() {
 	e.SetFooter("Written by splash#0003 | "+currentTime.Format("01/02/2006 15:04:05"), "https://pbs.twimg.com/profile_images/1351753538066546690/bh72m_6R_400x400.png")
 	e.SendToWebhook(webhook)
 }
+/* 
+func Equal(vx, vy interface{}) bool {
+	if reflect.TypeOf(vx) != reflect.TypeOf(vy) {
+		return false
+	}
+
+	switch x := vx.(type) {
+	case map[string]interface{}:
+		y := vy.(map[string]interface{})
+
+		if len(x) != len(y) {
+			return false
+		}
+
+		for k, v := range x {
+			val2 := y[k]
+
+			if (v == nil) != (val2 == nil) {
+				return false
+			}
+
+			if !Equal(v, val2) {
+				return false
+			}
+		}
+
+		return true
+	case []interface{}:
+		y := vy.([]interface{})
+
+		if len(x) != len(y) {
+			return false
+		}
+
+		var matches int
+		flagged := make([]bool, len(y))
+		for _, v := range x {
+			for i, v2 := range y {
+				if Equal(v, v2) && !flagged[i] {
+					matches++
+					flagged[i] = true
+
+					break
+				}
+			}
+		}
+
+		return matches == len(x)
+	default:
+		return vx == vy
+	}
+} */
 
 func VarRequest(url string) {
 	req, err := http.NewRequest("GET", url, nil)
@@ -154,6 +209,7 @@ func (t *Scraper) Monitor() {
 	sum := 0
 	loop:
 		for {
+			
 			if sum == 0 {
 
 			}
@@ -202,37 +258,60 @@ func (t *Scraper) Monitor() {
 				
 				if sum == 0 {
 					PreviousData = data
-				}
-				for i := range data.Products {
-					if i == 0 {
-						
-					} else {
-						for j := range data.Products[i].Variants {
-							fmt.Println(i)
-							
-							
-							fmt.Println(PreviousData.Products[i].Variants[j].ID)
-							fmt.Println(data.Products[i].Variants[j].ID)
-							
-							if data.Products[i].Variants[j].ID != PreviousData.Products[i].Variants[j].ID {
-								fmt.Println(data.Products[0])
-								fmt.Println("in the loop")
-								for k, value := range data.Products[i].Variants {
-									VariantMaps[k] = value.ID
-									SizeMaps[k] = value.Option1
-								}
-								t.FirstProdVariant = data.Products[i].Variants[j].ID
-								t.ProductTitle = data.Products[i].Title
-								t.ProductPrice = data.Products[i].Variants[j].Price
-								t.Handle = data.Products[i].Handle
-								t.SendWebhook()
-								fmt.Println("Sent Webhook")
-							} else {
-								break
-							}	
+				} else {
+					
+					if len(data.Products) > len(PreviousData.Products) {
+						fmt.Println("in")
+						difference := (len(data.Products) - len(PreviousData.Products))
+						for i := 0; i <= difference-1; i++ {
+							for j := range data.Products[i].Variants {
+								VariantMaps[j] = data.Products[i].Variants[j].ID
+								SizeMaps[j] = data.Products[i].Variants[j].Option1
+							}
+							t.ProductPrice = data.Products[i].Variants[0].Price
+							t.ImageURL = data.Products[i].Images[0].Src
+							t.ProductTitle = data.Products[i].Title
+							t.Handle = data.Products[i].Handle
+							t.SendWebhook()
 						}
+					} else if len(data.Products) == len(PreviousData.Products) {
+
+						fmt.Println("abc")
 					}
+					/* 
+					for i := range data.Products {
+						if i == 0 {
+							
+						} else {
+							for j := range data.Products[i].Variants {
+								fmt.Println(i)
+								
+								fmt.Println("data at sum > 0")
+								fmt.Println(data)
+								//fmt.Println(PreviousData.Products[i-1].Variants[j].ID)
+								//fmt.Println(data.Products[i].Variants[j].ID)
+								
+								if data != PreviousData {
+									fmt.Println(data.Products[0])
+									fmt.Println("in the loop")
+									//for k, value := range data.Products[i].Variants {
+									VariantMaps[j] = data.Products[i].Variants[j].ID
+									SizeMaps[j] = data.Products[i].Variants[j].Option1
+									//}
+									t.FirstProdVariant = data.Products[i].Variants[j].ID
+									t.ProductTitle = data.Products[i].Title
+									t.ProductPrice = data.Products[i].Variants[j].Price
+									t.Handle = data.Products[i].Handle
+									t.SendWebhook()
+									fmt.Println("Sent Webhook")
+								} else {
+									break
+								}	
+							}
+						}
+					} */
 				}
+				
 				PreviousData = data
 			}
 			sum++
