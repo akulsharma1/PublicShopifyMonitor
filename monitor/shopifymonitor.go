@@ -75,14 +75,13 @@ type Scraper struct {
 var VariantMaps = make(map[int]int64)
 var SizeMaps = make(map[int]string)
 var PreviousData = &Vars{}
-func (t *Scraper) SetScraperEmpty() {
-	//t.BaseURL = ""
-	t.ProductTitle = ""
-	t.ImageURL = ""
-	t.Handle = ""
-	t.ProductPrice = ""
-	//VariantMaps = {}
-	//SizeMaps = 
+func SetMapsEmpty() {
+	for i := range VariantMaps {
+		delete(VariantMaps, i)
+	}
+	for k := range SizeMaps {
+		delete(SizeMaps, k)
+	}
 }
 func (t *Scraper) Monitor() {
 	sum := 0
@@ -146,7 +145,7 @@ func (t *Scraper) Monitor() {
 							t.ProductTitle = data.Products[i].Title
 							t.Handle = data.Products[i].Handle
 							t.SendNewProdWebhook()
-							//t.SetScraperEmpty()
+							SetMapsEmpty()
 							fmt.Println("Sent product added webhook")
 						}
 					} else if len(data.Products) == 0 && len(PreviousData.Products) > 0 {
@@ -175,6 +174,7 @@ func (t *Scraper) Monitor() {
 									t.ProductTitle = data.Products[i].Title
 									t.Handle = data.Products[i].Handle
 									t.SendNewProdWebhook()
+									SetMapsEmpty()
 									//t.SetScraperEmpty()
 									fmt.Println("Sent new product webhook")
 								}
