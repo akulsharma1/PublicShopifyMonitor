@@ -2,7 +2,7 @@ package monitor
 
 import (
 	"time"
-	"github.com/aiomonitors/godiscord"
+	"github.com/akulsharma1/godiscord"
 	"fmt"
 )
 func (t *Scraper) SendNewProdWebhook() {
@@ -17,6 +17,8 @@ func (t *Scraper) SendNewProdWebhook() {
 	}
 	e.SetFooter("R2R • " + currentTime.Format("[01/02 15:04:05]")+ " • splash#0003", "https://media.discordapp.net/attachments/783026351531491361/852038253863632906/R2R.png?width=559&height=559")
 	e.SendToWebhook(t.Webhook)
+	//fmt.Println(e.Content)
+	//fmt.Println(e.Embeds)
 }
 
 func (t *Scraper) SendProductsRemovedWebhook() {
