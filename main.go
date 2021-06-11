@@ -1,35 +1,18 @@
 package main
 import (
-	"strings"
-	"fmt"
-	"net/url"
+	//"strings"
+	//"fmt"
+	//"net/url"
 	"splashshopifymonitor/monitor"
-	"net/http"
-	"io/ioutil"
+	//"net/http"
+	//"io/ioutil"
 )
+
+var webhook = "https://discord.com/api/webhooks/843003288487067710/rFw0ZGER5_s1QCOD_1h-496-DGpk7U1qATlkOD6rTajYAWhUCcv1BL81Naj-NVai8pQ6"
+ 
 func main() {
-	a := monitor.Scraper{BaseURL: "https://splashstore2.myshopify.com/"}
+	a := monitor.Scraper{BaseURL: "https://splashstore2.myshopify.com/", Webhook: webhook,}
 
 	a.Monitor()
 	//postlocalhost()
 }
-func Postlocalhost() {
-	//a, _ := url.Parse("https://localhost:8000")
-	body := url.Values{}
-	body.Add("name", "bob")
-	body.Add("type", "fluffycat")
-	b := strings.NewReader(body.Encode())
-	fmt.Println(b)
-	req, _ := http.NewRequest("POST", "http://localhost:8000", b)
-
-	resp, err := http.DefaultClient.Do(req)
-	resp.Header.Set("Content-Type", "application/json")
-	if err != nil {
-		fmt.Println(err)
-	}
-	defer resp.Body.Close()
-
-	pageJson, _ := ioutil.ReadAll(resp.Body)
-	fmt.Println(string(pageJson))
-	fmt.Println(resp.StatusCode)
-} 
