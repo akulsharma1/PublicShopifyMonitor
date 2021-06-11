@@ -1,7 +1,7 @@
 package main
 import (
 	//"strings"
-	//"fmt"
+	"fmt"
 	//"net/url"
 	"splashshopifymonitor/monitor"
 	//"net/http"
@@ -13,8 +13,15 @@ import (
 var r2rrichiewebhook = "https://discord.com/api/webhooks/853016234442489947/rIe1nUggovKQn81-uodKoJ7cXWjl3XBa8Nc5TcbLbb6vK8dmVjYr5R-yvrtmsv-YJ0LY"
  
 func main() {
-	a := monitor.Scraper{BaseURL: "https://splashstore2.myshopify.com/", Webhook: r2rrichiewebhook,}
+	var first string
+	fmt.Println("Welcome, type 1 to start tasks")
+	fmt.Scanln(&first)
+	if first == "1" {
+		a := monitor.Scraper{BaseURL: "https://richiele.com/", Webhook: r2rrichiewebhook,}
+		a.Monitor()
+	}
+	
 
-	a.Monitor()
+	
 	//postlocalhost()
 }
