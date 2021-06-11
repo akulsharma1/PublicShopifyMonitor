@@ -8,9 +8,6 @@ import (
 	"io/ioutil"
 	"encoding/json"
 	"reflect"
-	//"github.com/stretchr/testify/require"
-	//"github.com/emacampolo/gomparator"
-	//"time"
 )
 type Vars struct {
 	Products []struct {
@@ -70,6 +67,8 @@ type Scraper struct {
 	ImageURL string
 	Handle string
 	ProductPrice string
+
+	Webhook string
 }
 
 var VariantMaps = make(map[int]int64)
@@ -87,7 +86,7 @@ func (t *Scraper) Monitor() {
 	sum := 0
 	loop:
 		for {
-			req, err := http.NewRequest("GET", t.BaseURL+"products.json?limit=10", nil)
+			req, err := http.NewRequest("GET", t.BaseURL+"products.json?limit=999", nil)
 			if err != nil {
 				fmt.Println(err.Error())
 				break loop
@@ -108,11 +107,12 @@ func (t *Scraper) Monitor() {
 				fmt.Println(err.Error())
 				break loop
 			}
+			currentTime := time.Now()
 			defer resp.Body.Close()
 			pageJson, _ := ioutil.ReadAll(resp.Body)
 			switch resp.StatusCode {
 			case 200:
-				fmt.Println("[200] Monitoring")
+				fmt.Printf("[200] Monitoring %v\n", currentTime.Format("[01/02 15:04:05]"))
 			case 401:
 				fmt.Printf("[401] Password Page Up for %v\n", t.BaseURL)
 			case 429:
@@ -136,6 +136,7 @@ func (t *Scraper) Monitor() {
 						//fmt.Println("in")
 						difference := (len(data.Products) - len(PreviousData.Products))
 						for i := 0; i <= difference-1; i++ {
+							fmt.Println("In here")
 							for j := range data.Products[i].Variants {
 								VariantMaps[j] = data.Products[i].Variants[j].ID
 								SizeMaps[j] = data.Products[i].Variants[j].Option1
@@ -176,14 +177,13 @@ func (t *Scraper) Monitor() {
 									t.SendNewProdWebhook()
 									SetMapsEmpty()
 									//t.SetScraperEmpty()
+									//fmt.Println(data.Products)
 									fmt.Println("Sent new product webhook")
 								}
 								//fmt.Println("found a difference")
 								
 							}
 						}
-					} else if len(data.Products) < len(PreviousData.Products) {
-
 					}
 				}
 				PreviousData = data
