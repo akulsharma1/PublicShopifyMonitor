@@ -147,6 +147,11 @@ func (t *Scraper) Monitor() {
 							t.Handle = data.Products[i].Handle
 							t.SendNewProdWebhook()
 							SetMapsEmpty()
+							fmt.Println("-------------------")
+							//fmt.Println(t.ProductPrice)
+							//fmt.Println(t.ImageURL)
+							//fmt.Println(t.ProductTitle)
+							//fmt.Println(t.Handle)
 							fmt.Println("Sent product added webhook")
 						}
 					} else if len(data.Products) == 0 && len(PreviousData.Products) > 0 {
