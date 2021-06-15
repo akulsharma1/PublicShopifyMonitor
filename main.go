@@ -17,7 +17,7 @@ func main() {
 	var input string
 	fmt.Println("Welcome, reading website file")
 
-	dat, err := ioutil.ReadFile("websites.txt")
+	dat, err := ioutil.ReadFile("./websites/websites.txt")
 	if err != nil {
 		panic(err)
 	}
