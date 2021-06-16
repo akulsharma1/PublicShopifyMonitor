@@ -69,6 +69,8 @@ type Scraper struct {
 	ProductPrice string
 
 	Webhook string
+
+	//PrismQuicktask string
 }
 
 var VariantMaps = make(map[int]int64)
@@ -84,6 +86,7 @@ func SetMapsEmpty() {
 }
 func (t *Scraper) Monitor() {
 	sum := 0
+	var nonfirststatuscode int
 	loop:
 		for {
 			req, err := http.NewRequest("GET", t.BaseURL+"products.json?limit=999", nil)
@@ -107,14 +110,29 @@ func (t *Scraper) Monitor() {
 				fmt.Println(err.Error())
 				break loop
 			}
+			
 			currentTime := time.Now()
 			defer resp.Body.Close()
 			pageJson, _ := ioutil.ReadAll(resp.Body)
 			switch resp.StatusCode {
 			case 200:
 				fmt.Printf("[200] Monitoring %v\n", currentTime.Format("[01/02 15:04:05]"))
+				if sum > 0 {
+					switch nonfirststatuscode {
+					case 401:
+						fmt.Printf("[%v] Sending password page went down webhook\n", nonfirststatuscode)
+						t.SendPwPageDownWebhook()
+					}
+				}
 			case 401:
 				fmt.Printf("[401] Password Page Up for %v\n", t.BaseURL)
+				if sum > 0 {
+					switch nonfirststatuscode {
+					case 200:
+						fmt.Printf("[%v] Sending password page just went up webhook\n", nonfirststatuscode)
+						t.SendPwPageUpWebhook()
+					}
+				}
 			case 429:
 				fmt.Println("[429] Rate limited")
 			case 500:
@@ -148,10 +166,6 @@ func (t *Scraper) Monitor() {
 							t.SendNewProdWebhook()
 							SetMapsEmpty()
 							fmt.Println("-------------------")
-							//fmt.Println(t.ProductPrice)
-							//fmt.Println(t.ImageURL)
-							//fmt.Println(t.ProductTitle)
-							//fmt.Println(t.Handle)
 							fmt.Println("Sent product added webhook")
 						}
 					} else if len(data.Products) == 0 && len(PreviousData.Products) > 0 {
@@ -192,6 +206,9 @@ func (t *Scraper) Monitor() {
 					}
 				}
 				PreviousData = data
+			}
+			if sum > 0 {
+				nonfirststatuscode = resp.StatusCode
 			}
 			sum++
 			time.Sleep(4000*time.Millisecond)
