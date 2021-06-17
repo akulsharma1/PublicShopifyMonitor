@@ -8,7 +8,9 @@ import (
 	"io/ioutil"
 	"encoding/json"
 	"reflect"
+	"splashshopifymonitor/client"
 )
+var delay int
 type Vars struct {
 	Products []struct {
 		ID          int64    `json:"id"`
@@ -61,7 +63,7 @@ type Vars struct {
 type Scraper struct {
 	BaseURL string
 
-	ProxyList []string
+	Proxies []string
 
 	ProductTitle string
 	ImageURL string
@@ -70,7 +72,8 @@ type Scraper struct {
 
 	Webhook string
 
-	//PrismQuicktask string
+	Client *http.Client
+	CookieJar client.ExportableCookieJar
 }
 
 var VariantMaps = make(map[int]int64)
@@ -84,17 +87,51 @@ func SetMapsEmpty() {
 		delete(SizeMaps, k)
 	}
 }
+
+
+func (t *Scraper) GetHttpBin() {
+	loop:
+	for {
+		t.RotateProxy()
+		req, err := http.NewRequest("GET", "http://httpbin.org/get", nil)
+		if err != nil {
+			fmt.Println(err.Error())
+			break loop
+		}
+		req.Header.Set("Sec-Ch-Ua", "\" Not A;Brand\";v=\"99\", \"Chromium\";v=\"90\", \"Google Chrome\";v=\"90\"")
+		req.Header.Set("Sec-Ch-Ua-Mobile", "?0")
+		req.Header.Set("Upgrade-Insecure-Requests", "1")
+		req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36")
+		req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9")
+		req.Header.Set("Sec-Fetch-Site", "none")
+		req.Header.Set("Sec-Fetch-Mode", "navigate")
+		req.Header.Set("Sec-Fetch-User", "?1")
+		req.Header.Set("Sec-Fetch-Dest", "document")
+		req.Header.Set("Accept-Language", "en-US,en;q=0.9")
+		resp, err := t.Client.Do(req)
+		if err != nil {
+			fmt.Println(err.Error())
+			break loop
+		}
+		fmt.Println(t.Proxies)
+		defer resp.Body.Close()
+		pageJson, _ := ioutil.ReadAll(resp.Body)
+		fmt.Println(string(pageJson))
+		time.Sleep(time.Duration(150)*time.Millisecond)
+	}
+}
 func (t *Scraper) Monitor() {
+	delay = 4000/35
 	sum := 0
 	var nonfirststatuscode int
 	loop:
 		for {
+			t.RotateProxy()
 			req, err := http.NewRequest("GET", t.BaseURL+"products.json?limit=999", nil)
 			if err != nil {
 				fmt.Println(err.Error())
 				break loop
 			}
-			//fmt.Println(t.BaseURL+"products.json?limit=25")
 			req.Header.Set("Sec-Ch-Ua", "\" Not A;Brand\";v=\"99\", \"Chromium\";v=\"90\", \"Google Chrome\";v=\"90\"")
 			req.Header.Set("Sec-Ch-Ua-Mobile", "?0")
 			req.Header.Set("Upgrade-Insecure-Requests", "1")
@@ -105,7 +142,7 @@ func (t *Scraper) Monitor() {
 			req.Header.Set("Sec-Fetch-User", "?1")
 			req.Header.Set("Sec-Fetch-Dest", "document")
 			req.Header.Set("Accept-Language", "en-US,en;q=0.9")
-			resp, err := http.DefaultClient.Do(req)
+			resp, err := t.Client.Do(req)
 			if err != nil {
 				fmt.Println(err.Error())
 				break loop
@@ -151,7 +188,6 @@ func (t *Scraper) Monitor() {
 				} else {
 					
 					if len(data.Products) > len(PreviousData.Products) {
-						//fmt.Println("in")
 						difference := (len(data.Products) - len(PreviousData.Products))
 						for i := 0; i <= difference-1; i++ {
 							fmt.Println("In here")
@@ -165,11 +201,9 @@ func (t *Scraper) Monitor() {
 							t.Handle = data.Products[i].Handle
 							t.SendNewProdWebhook()
 							SetMapsEmpty()
-							fmt.Println("-------------------")
 							fmt.Println("Sent product added webhook")
 						}
 					} else if len(data.Products) == 0 && len(PreviousData.Products) > 0 {
-						//fmt.Println("in remove webhook")
 						t.SendProductsRemovedWebhook()
 						fmt.Println("Sent Products removed webhook")
 					} else if len(data.Products) == len(PreviousData.Products) && len(data.Products) != 0 {
@@ -181,7 +215,6 @@ func (t *Scraper) Monitor() {
 								for k := range data.Products {
 									if reflect.DeepEqual(data.Products[i], PreviousData.Products[k]) {
 										prodExists = true
-										//break
 									}
 								}
 								if !prodExists {
@@ -195,11 +228,8 @@ func (t *Scraper) Monitor() {
 									t.Handle = data.Products[i].Handle
 									t.SendNewProdWebhook()
 									SetMapsEmpty()
-									//t.SetScraperEmpty()
-									//fmt.Println(data.Products)
 									fmt.Println("Sent new product webhook")
 								}
-								//fmt.Println("found a difference")
 								
 							}
 						}
@@ -211,7 +241,7 @@ func (t *Scraper) Monitor() {
 				nonfirststatuscode = resp.StatusCode
 			}
 			sum++
-			time.Sleep(4000*time.Millisecond)
+			time.Sleep(time.Duration(delay)*time.Millisecond)
 			
 		}
 }
