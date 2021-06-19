@@ -9,8 +9,10 @@ import (
 //var r2reewebhook = "https://discord.com/api/webhooks/852726307346841610/zhT7akZ2VnDLdrXuFFl8BdCDf0TanqRk0TSPskTm8fn-IhxvAHDsJI2cITGr2pJKLBWs"
 //var r2rrichiewebhook = "https://discord.com/api/webhooks/853016234442489947/rIe1nUggovKQn81-uodKoJ7cXWjl3XBa8Nc5TcbLbb6vK8dmVjYr5R-yvrtmsv-YJ0LY"
 //var r2rbodegawebhook = "https://discord.com/api/webhooks/854535961601507338/kKACrV-FelmxK8VzHXjgf7Hb3dfeANXAHmXZ-8XT3wE4i4P0u72NkJH5OBpNGEA4sR-u"
-var r2rlfwebhook = "https://discord.com/api/webhooks/853997135683125261/FGbFDvDfZIF8dcXt12VOWjArgZnxs14TKodIJu5sBCGzqJJlDLc3K0XlrUcwnaE83AWO"
-//var r2r bladeewebhook = "https://discord.com/api/webhooks/855118313281159179/_5Knr86_tv6QbdsZ4FJ2LbRoVN-XipjphYGv1l4iIWbSJgct4eBHwppfL0m5B9SvckBm"
+//var r2rlfwebhook = "https://discord.com/api/webhooks/853997135683125261/FGbFDvDfZIF8dcXt12VOWjArgZnxs14TKodIJu5sBCGzqJJlDLc3K0XlrUcwnaE83AWO"
+//var r2rbladeewebhook = "https://discord.com/api/webhooks/855118313281159179/_5Knr86_tv6QbdsZ4FJ2LbRoVN-XipjphYGv1l4iIWbSJgct4eBHwppfL0m5B9SvckBm"
+var r2rbapewebhook = "https://discord.com/api/webhooks/855668453368135680/HzkhWf6md2QQU7uOpHArNHYIPB_ul8mC4KXh5ZuYz8k8h0cKXq41ZJJhJh4V6BwXoM-x"
+// var r2rtelfarmonitor = "https://discord.com/api/webhooks/855668645852872705/tQTnJB3PxSuSuK24hlLg-pCnQxCn7L7-XnR65RGejGjjE5eVZXCr8ufrXiiZbBJ2HDXv"
  
 func main() {
 	var website string
@@ -33,7 +35,7 @@ func main() {
 
 	if input == "1" {
 		proxies, _ := taskengine.ReadProxies(true)
-		a := monitor.Scraper{BaseURL: website, Webhook: r2rlfwebhook, Proxies: proxies}
+		a := monitor.Scraper{BaseURL: website, Webhook: r2rbapewebhook, Proxies: proxies}
 		a.Client, _ = a.NewClient()
 		a.Monitor()
 	}
