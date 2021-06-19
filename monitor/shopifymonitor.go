@@ -121,7 +121,7 @@ func (t *Scraper) GetHttpBin() {
 	}
 }
 func (t *Scraper) Monitor() {
-	delay = 4000/35
+	delay = 4000/30
 	sum := 0
 	var nonfirststatuscode int
 	loop:
