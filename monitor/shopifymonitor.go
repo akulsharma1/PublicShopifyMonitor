@@ -9,6 +9,8 @@ import (
 	"encoding/json"
 	"reflect"
 	"splashshopifymonitor/client"
+	"net/url"
+	"strings"
 )
 var delay int
 type Vars struct {
@@ -120,7 +122,7 @@ func (t *Scraper) GetHttpBin() {
 		time.Sleep(time.Duration(150)*time.Millisecond)
 	}
 }
-func (t *Scraper) Monitor() {
+func (t *Scraper) Monitor(webhook string) {
 	delay = 4000/30
 	sum := 0
 	var nonfirststatuscode int
@@ -159,6 +161,7 @@ func (t *Scraper) Monitor() {
 					case 401:
 						fmt.Printf("[%v] Sending password page went down webhook\n", nonfirststatuscode)
 						t.SendPwPageDownWebhook()
+						t.SendPwPageDownWebhook2(webhook)
 					}
 				}
 			case 401:
@@ -168,6 +171,7 @@ func (t *Scraper) Monitor() {
 					case 200:
 						fmt.Printf("[%v] Sending password page just went up webhook\n", nonfirststatuscode)
 						t.SendPwPageUpWebhook()
+						t.SendPwPageUpWebhook2(webhook)
 					}
 				}
 			case 429:
@@ -200,11 +204,13 @@ func (t *Scraper) Monitor() {
 							t.ProductTitle = data.Products[i].Title
 							t.Handle = data.Products[i].Handle
 							t.SendNewProdWebhook()
+							t.SendNewProdWebhook2(webhook)
 							SetMapsEmpty()
 							fmt.Println("Sent product added webhook")
 						}
 					} else if len(data.Products) == 0 && len(PreviousData.Products) > 0 {
 						t.SendProductsRemovedWebhook()
+						t.SendProductsRemovedWebhook2(webhook)
 						fmt.Println("Sent Products removed webhook")
 					} else if len(data.Products) == len(PreviousData.Products) && len(data.Products) != 0 {
 						for i := range data.Products {
@@ -227,6 +233,7 @@ func (t *Scraper) Monitor() {
 									t.ProductTitle = data.Products[i].Title
 									t.Handle = data.Products[i].Handle
 									t.SendNewProdWebhook()
+									t.SendNewProdWebhook2(webhook)
 									SetMapsEmpty()
 									fmt.Println("Sent new product webhook")
 								}
@@ -244,4 +251,55 @@ func (t *Scraper) Monitor() {
 			time.Sleep(time.Duration(delay)*time.Millisecond)
 			
 		}
+}
+
+func (t *Scraper) PwLogin() {
+	loop:
+	for {
+		t.RotateProxy()
+		params := url.Values{}
+		params.Add("form_type", `storefront_password`)
+		params.Add("utf8", `✓`)
+		params.Add("password", `8675309`)
+		params.Add("commit", ``)
+		body := strings.NewReader(params.Encode())
+
+		req, err := http.NewRequest("POST", "https://beaspunge.com/password", body)
+		if err != nil {
+			fmt.Println(err)
+		}
+		req.Header.Set("Authority", "beaspunge.com")
+		req.Header.Set("Cache-Control", "max-age=0")
+		req.Header.Set("Sec-Ch-Ua", "\" Not;A Brand\";v=\"99\", \"Google Chrome\";v=\"91\", \"Chromium\";v=\"91\"")
+		req.Header.Set("Sec-Ch-Ua-Mobile", "?0")
+		req.Header.Set("Upgrade-Insecure-Requests", "1")
+		req.Header.Set("Origin", "https://beaspunge.com")
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+		req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9")
+		req.Header.Set("Sec-Fetch-Site", "same-origin")
+		req.Header.Set("Sec-Fetch-Mode", "navigate")
+		req.Header.Set("Sec-Fetch-User", "?1")
+		req.Header.Set("Sec-Fetch-Dest", "document")
+		req.Header.Set("Referer", "https://beaspunge.com/password")
+		req.Header.Set("Accept-Language", "en-US,en;q=0.9")
+
+		resp, err := t.Client.Do(req)
+		if err != nil {
+			fmt.Println(err)
+		}
+		defer resp.Body.Close()
+		switch resp.StatusCode {
+		case 200:
+			fmt.Println("got through 200")
+			break loop
+		case 302:
+			fmt.Println("also got through 302")
+			break loop
+		default:
+			fmt.Println("error")
+		}
+	}
+
+	
 }
