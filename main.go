@@ -29,30 +29,34 @@ func main() {
 	
 	fmt.Printf("Read file. Ready to start monitoring for %s\n", string(dat)) */
 	
-	fmt.Println("Welcome, what site do you want to begin monitoring for. Example:")
-	fmt.Println("https://kith.com/")
-	fmt.Scanln(&website)
-	fmt.Println("Type 1 then press enter to begin monitoring.")
+	
+	fmt.Println("Presets:\nEric Emanuel: 1\nLost Files: 2\nTelfar: 3\nCustom: 4")
+	fmt.Println("Type the number which you want then press enter.")
 	fmt.Scanln(&input)
 
 	if input == "1" { // eric emanuel
 		proxies, _ := taskengine.ReadProxies(true)
-		a := monitor.Scraper{BaseURL: website, Webhook: r2reewebhook, Proxies: proxies}
+		a := monitor.Scraper{BaseURL: "https://ericemanuel.com/", Webhook: r2reewebhook, Proxies: proxies}
 		a.Client, _ = a.NewClient()
 		a.Monitor(splashxeewebhook)
 	} else if input == "2" { // lost files
 		proxies, _ := taskengine.ReadProxies(true)
-		a := monitor.Scraper{BaseURL: website, Webhook: r2rlfwebhook, Proxies: proxies}
+		a := monitor.Scraper{BaseURL: "https://lostfiles.shop/", Webhook: r2rlfwebhook, Proxies: proxies}
 		a.Client, _ = a.NewClient()
 		a.Monitor(splashxlfwebhook)
 	} else if input == "3" { // telfar
 		proxies, _ := taskengine.ReadProxies(true)
-		a := monitor.Scraper{BaseURL: website, Webhook: personalwebhook, Proxies: proxies}
+		a := monitor.Scraper{BaseURL: "https://shop.telfar.net/", Webhook: personalwebhook, Proxies: proxies}
 		a.Client, _ = a.NewClient()
 		a.Monitor(splashxtelfarwebhook)
 	} else if input == "4" { // other (r2r only)
 		proxies, _ := taskengine.ReadProxies(true)
-		a := monitor.Scraper{BaseURL: website, Webhook: r2r2, Proxies: proxies}
+		fmt.Println("Enter discord webhook for custom option")
+		var dwebhook string
+		fmt.Scanln(&dwebhook)
+		fmt.Println("What site do you want to begin monitoring for. Example: \nhttps://kith.com/")
+		fmt.Scanln(&website)
+		a := monitor.Scraper{BaseURL: website, Webhook: dwebhook, Proxies: proxies}
 		a.Client, _ = a.NewClient()
 		a.Monitor(personalwebhook)
 	}
