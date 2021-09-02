@@ -92,39 +92,7 @@ func SetMapsEmpty() {
 	}
 }
 
-func (t *Scraper) GetHttpBin() {
-loop:
-	for {
-		t.RotateProxy()
-		req, err := http.NewRequest("GET", "http://httpbin.org/get", nil)
-		if err != nil {
-			fmt.Println(err.Error())
-			break loop
-		}
-		req.Header.Set("Sec-Ch-Ua", "\" Not A;Brand\";v=\"99\", \"Chromium\";v=\"90\", \"Google Chrome\";v=\"90\"")
-		req.Header.Set("Sec-Ch-Ua-Mobile", "?0")
-		req.Header.Set("Upgrade-Insecure-Requests", "1")
-		req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36")
-		req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9")
-		req.Header.Set("Sec-Fetch-Site", "none")
-		req.Header.Set("Sec-Fetch-Mode", "navigate")
-		req.Header.Set("Sec-Fetch-User", "?1")
-		req.Header.Set("Sec-Fetch-Dest", "document")
-		req.Header.Set("Accept-Language", "en-US,en;q=0.9")
-		resp, err := t.Client.Do(req)
-		if err != nil {
-			fmt.Println(err.Error())
-			break loop
-		}
-		fmt.Println(t.Proxies)
-		defer resp.Body.Close()
-		pageJson, _ := ioutil.ReadAll(resp.Body)
-		fmt.Println(string(pageJson))
-		time.Sleep(time.Duration(150) * time.Millisecond)
-	}
-}
-func (t *Scraper) Monitor() {
-	delay = 4000 / 30
+func (t *Scraper) Monitor(delay int) {
 	sum := 0
 	var nonfirststatuscode int
 loop:
@@ -248,9 +216,8 @@ loop:
 
 	}
 }
-func (t *Scraper) KwMonitor(keywords string) {
+func (t *Scraper) KwMonitor(keywords string, delay int) {
 	keywordList := strings.Split(keywords, ",")
-	delay = 4000 / 30
 	sum := 0
 	var nonfirststatuscode int
 	loop:
