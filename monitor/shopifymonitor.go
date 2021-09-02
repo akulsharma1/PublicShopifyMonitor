@@ -3,16 +3,18 @@ package monitor
 import (
 	"time"
 	//"strings"
-	"net/http"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"encoding/json"
+	"net/http"
+	"net/url"
 	"reflect"
 	"splashshopifymonitor/client"
-	"net/url"
 	"strings"
 )
+
 var delay int
+
 type Vars struct {
 	Products []struct {
 		ID          int64    `json:"id"`
@@ -68,19 +70,20 @@ type Scraper struct {
 	Proxies []string
 
 	ProductTitle string
-	ImageURL string
-	Handle string
+	ImageURL     string
+	Handle       string
 	ProductPrice string
 
 	Webhook string
 
-	Client *http.Client
+	Client    *http.Client
 	CookieJar client.ExportableCookieJar
 }
 
 var VariantMaps = make(map[int]int64)
 var SizeMaps = make(map[int]string)
 var PreviousData = &Vars{}
+
 func SetMapsEmpty() {
 	for i := range VariantMaps {
 		delete(VariantMaps, i)
@@ -90,9 +93,8 @@ func SetMapsEmpty() {
 	}
 }
 
-
 func (t *Scraper) GetHttpBin() {
-	loop:
+loop:
 	for {
 		t.RotateProxy()
 		req, err := http.NewRequest("GET", "http://httpbin.org/get", nil)
@@ -119,142 +121,288 @@ func (t *Scraper) GetHttpBin() {
 		defer resp.Body.Close()
 		pageJson, _ := ioutil.ReadAll(resp.Body)
 		fmt.Println(string(pageJson))
-		time.Sleep(time.Duration(150)*time.Millisecond)
+		time.Sleep(time.Duration(150) * time.Millisecond)
 	}
 }
 func (t *Scraper) Monitor(webhook string) {
-	delay = 4000/30
+	delay = 4000 / 30
 	sum := 0
 	var nonfirststatuscode int
-	loop:
-		for {
-			t.RotateProxy()
-			req, err := http.NewRequest("GET", t.BaseURL+"products.json?limit=999", nil)
-			if err != nil {
-				fmt.Println(err.Error())
-				break loop
-			}
-			req.Header.Set("Sec-Ch-Ua", "\" Not A;Brand\";v=\"99\", \"Chromium\";v=\"90\", \"Google Chrome\";v=\"90\"")
-			req.Header.Set("Sec-Ch-Ua-Mobile", "?0")
-			req.Header.Set("Upgrade-Insecure-Requests", "1")
-			req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36")
-			req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9")
-			req.Header.Set("Sec-Fetch-Site", "none")
-			req.Header.Set("Sec-Fetch-Mode", "navigate")
-			req.Header.Set("Sec-Fetch-User", "?1")
-			req.Header.Set("Sec-Fetch-Dest", "document")
-			req.Header.Set("Accept-Language", "en-US,en;q=0.9")
-			resp, err := t.Client.Do(req)
-			if err != nil {
-				fmt.Println(err.Error())
-				break loop
-			}
-			
-			currentTime := time.Now()
-			defer resp.Body.Close()
-			pageJson, _ := ioutil.ReadAll(resp.Body)
-			switch resp.StatusCode {
-			case 200:
-				fmt.Printf("[200] Monitoring %v\n", currentTime.Format("[01/02 15:04:05]"))
-				if sum > 0 {
-					switch nonfirststatuscode {
-					case 401:
-						fmt.Printf("[%v] Sending password page went down webhook\n", nonfirststatuscode)
-						t.SendPwPageDownWebhook()
-						t.SendPwPageDownWebhook2(webhook)
-					}
+loop:
+	for {
+		t.RotateProxy()
+		req, err := http.NewRequest("GET", t.BaseURL+"products.json?limit=999", nil)
+		if err != nil {
+			fmt.Println(err.Error())
+			break loop
+		}
+		req.Header.Set("Sec-Ch-Ua", "\" Not A;Brand\";v=\"99\", \"Chromium\";v=\"90\", \"Google Chrome\";v=\"90\"")
+		req.Header.Set("Sec-Ch-Ua-Mobile", "?0")
+		req.Header.Set("Upgrade-Insecure-Requests", "1")
+		req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36")
+		req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9")
+		req.Header.Set("Sec-Fetch-Site", "none")
+		req.Header.Set("Sec-Fetch-Mode", "navigate")
+		req.Header.Set("Sec-Fetch-User", "?1")
+		req.Header.Set("Sec-Fetch-Dest", "document")
+		req.Header.Set("Accept-Language", "en-US,en;q=0.9")
+		resp, err := t.Client.Do(req)
+		if err != nil {
+			fmt.Println(err.Error())
+			break loop
+		}
+
+		currentTime := time.Now()
+		defer resp.Body.Close()
+		pageJson, _ := ioutil.ReadAll(resp.Body)
+		switch resp.StatusCode {
+		case 200:
+			fmt.Printf("[200] Monitoring %v\n", currentTime.Format("[01/02 15:04:05]"))
+			if sum > 0 {
+				switch nonfirststatuscode {
+				case 401:
+					fmt.Printf("[%v] Sending password page went down webhook\n", nonfirststatuscode)
+					t.SendPwPageDownWebhook()
+					t.SendPwPageDownWebhook2(webhook)
 				}
-			case 401:
-				fmt.Printf("[401] Password Page Up for %v\n", t.BaseURL)
-				if sum > 0 {
-					switch nonfirststatuscode {
-					case 200:
-						fmt.Printf("[%v] Sending password page just went up webhook\n", nonfirststatuscode)
-						t.SendPwPageUpWebhook()
-						t.SendPwPageUpWebhook2(webhook)
-					}
-				}
-			case 429:
-				fmt.Println("[429] Rate limited")
-			case 500:
-				fmt.Println("[500] Server error")
 			}
-			if len(pageJson) <= 0{
-				fmt.Println("Failed parsing page")
+		case 401:
+			fmt.Printf("[401] Password Page Up for %v\n", t.BaseURL)
+			if sum > 0 {
+				switch nonfirststatuscode {
+				case 200:
+					fmt.Printf("[%v] Sending password page just went up webhook\n", nonfirststatuscode)
+					t.SendPwPageUpWebhook()
+					t.SendPwPageUpWebhook2(webhook)
+				}
+			}
+		case 429:
+			fmt.Println("[429] Rate limited")
+		case 500:
+			fmt.Println("[500] Server error")
+		}
+		if len(pageJson) <= 0 {
+			fmt.Println("Failed parsing page")
+		} else {
+
+			resp := string(pageJson)
+			data := &Vars{}
+			_ = json.Unmarshal([]byte(resp), data)
+
+			if sum == 0 {
+				PreviousData = data
 			} else {
-				
-				resp := string(pageJson)
-				data := &Vars{}
-				_ = json.Unmarshal([]byte(resp), data)
-				
-				if sum == 0 {
-					PreviousData = data
-				} else {
-					
-					if len(data.Products) > len(PreviousData.Products) {
-						difference := (len(data.Products) - len(PreviousData.Products))
-						for i := 0; i <= difference-1; i++ {
-							fmt.Println("In here")
-							for j := range data.Products[i].Variants {
-								VariantMaps[j] = data.Products[i].Variants[j].ID
-								SizeMaps[j] = data.Products[i].Variants[j].Option1
+
+				if len(data.Products) > len(PreviousData.Products) {
+					difference := (len(data.Products) - len(PreviousData.Products))
+					for i := 0; i <= difference-1; i++ {
+						fmt.Println("In here")
+						for j := range data.Products[i].Variants {
+							VariantMaps[j] = data.Products[i].Variants[j].ID
+							SizeMaps[j] = data.Products[i].Variants[j].Option1
+						}
+						t.ProductPrice = data.Products[i].Variants[0].Price
+						t.ImageURL = data.Products[i].Images[0].Src
+						t.ProductTitle = data.Products[i].Title
+						t.Handle = data.Products[i].Handle
+						t.SendNewProdWebhook()
+						t.SendNewProdWebhook2(webhook)
+						SetMapsEmpty()
+						fmt.Println("Sent product added webhook")
+					}
+				} else if len(data.Products) == 0 && len(PreviousData.Products) > 0 {
+					t.SendProductsRemovedWebhook()
+					t.SendProductsRemovedWebhook2(webhook)
+					fmt.Println("Sent Products removed webhook")
+				} else if len(data.Products) == len(PreviousData.Products) && len(data.Products) != 0 {
+					for i := range data.Products {
+						if reflect.DeepEqual(data.Products[i], PreviousData.Products[i]) {
+
+						} else {
+							prodExists := false
+							for k := range data.Products {
+								if reflect.DeepEqual(data.Products[i], PreviousData.Products[k]) {
+									prodExists = true
+								}
 							}
-							t.ProductPrice = data.Products[i].Variants[0].Price
-							t.ImageURL = data.Products[i].Images[0].Src
-							t.ProductTitle = data.Products[i].Title
-							t.Handle = data.Products[i].Handle
+							if !prodExists {
+								for j := range data.Products[i].Variants {
+									VariantMaps[j] = data.Products[i].Variants[j].ID
+									SizeMaps[j] = data.Products[i].Variants[j].Option1
+								}
+								t.ProductPrice = data.Products[i].Variants[0].Price
+								t.ImageURL = data.Products[i].Images[0].Src
+								t.ProductTitle = data.Products[i].Title
+								t.Handle = data.Products[i].Handle
+								t.SendNewProdWebhook()
+								t.SendNewProdWebhook2(webhook)
+								SetMapsEmpty()
+								fmt.Println("Sent new product webhook")
+							}
+
+						}
+					}
+				}
+			}
+			PreviousData = data
+		}
+		if sum > 0 {
+			nonfirststatuscode = resp.StatusCode
+		}
+		sum++
+		time.Sleep(time.Duration(delay) * time.Millisecond)
+
+	}
+}
+func (t *Scraper) KwMonitor(keywords, webhook string) {
+	keywordList := strings.Split(keywords, ",")
+	delay = 4000 / 30
+	sum := 0
+	var nonfirststatuscode int
+loop:
+	for {
+		t.RotateProxy()
+		req, err := http.NewRequest("GET", t.BaseURL+"products.json?limit=999", nil)
+		if err != nil {
+			fmt.Println(err.Error())
+			break loop
+		}
+		req.Header.Set("Sec-Ch-Ua", "\" Not A;Brand\";v=\"99\", \"Chromium\";v=\"90\", \"Google Chrome\";v=\"90\"")
+		req.Header.Set("Sec-Ch-Ua-Mobile", "?0")
+		req.Header.Set("Upgrade-Insecure-Requests", "1")
+		req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36")
+		req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9")
+		req.Header.Set("Sec-Fetch-Site", "none")
+		req.Header.Set("Sec-Fetch-Mode", "navigate")
+		req.Header.Set("Sec-Fetch-User", "?1")
+		req.Header.Set("Sec-Fetch-Dest", "document")
+		req.Header.Set("Accept-Language", "en-US,en;q=0.9")
+		resp, err := t.Client.Do(req)
+		if err != nil {
+			fmt.Println(err.Error())
+			break loop
+		}
+
+		currentTime := time.Now()
+		defer resp.Body.Close()
+		pageJson, _ := ioutil.ReadAll(resp.Body)
+		switch resp.StatusCode {
+		case 200:
+			fmt.Printf("[200] Monitoring %v\n", currentTime.Format("[01/02 15:04:05]"))
+			if sum > 0 {
+				switch nonfirststatuscode {
+				case 401:
+					fmt.Printf("[%v] Sending password page went down webhook\n", nonfirststatuscode)
+					t.SendPwPageDownWebhook()
+					t.SendPwPageDownWebhook2(webhook)
+				}
+			}
+		case 401:
+			fmt.Printf("[401] Password Page Up for %v\n", t.BaseURL)
+			if sum > 0 {
+				switch nonfirststatuscode {
+				case 200:
+					fmt.Printf("[%v] Sending password page just went up webhook\n", nonfirststatuscode)
+					t.SendPwPageUpWebhook()
+					t.SendPwPageUpWebhook2(webhook)
+				}
+			}
+		case 429:
+			fmt.Println("[429] Rate limited")
+		case 500:
+			fmt.Println("[500] Server error")
+		}
+		if len(pageJson) <= 0 {
+			fmt.Println("Failed parsing page")
+		} else {
+
+			resp := string(pageJson)
+			data := &Vars{}
+			_ = json.Unmarshal([]byte(resp), data)
+
+			if sum == 0 {
+				PreviousData = data
+			} else {
+
+				if len(data.Products) > len(PreviousData.Products) {
+					difference := (len(data.Products) - len(PreviousData.Products))
+					for i := 0; i <= difference-1; i++ {
+						fmt.Println("In here")
+						for j := range data.Products[i].Variants {
+							VariantMaps[j] = data.Products[i].Variants[j].ID
+							SizeMaps[j] = data.Products[i].Variants[j].Option1
+						}
+						t.ProductPrice = data.Products[i].Variants[0].Price
+						t.ImageURL = data.Products[i].Images[0].Src
+						t.ProductTitle = data.Products[i].Title
+						t.Handle = data.Products[i].Handle
+						x := true
+						for x {
+							for j := range keywordList {
+								if string(keywordList[i][0]) == "-" {
+									if strings.Contains(data.Products[i].Title, string(keywordList[j])) {
+										x = false
+									}
+								} else {
+									if !strings.Contains(data.Products[i].Title, string(keywordList[j])) {
+										x = false
+									}
+								}
+							}
 							t.SendNewProdWebhook()
 							t.SendNewProdWebhook2(webhook)
-							SetMapsEmpty()
-							fmt.Println("Sent product added webhook")
 						}
-					} else if len(data.Products) == 0 && len(PreviousData.Products) > 0 {
-						t.SendProductsRemovedWebhook()
-						t.SendProductsRemovedWebhook2(webhook)
-						fmt.Println("Sent Products removed webhook")
-					} else if len(data.Products) == len(PreviousData.Products) && len(data.Products) != 0 {
-						for i := range data.Products {
-							if reflect.DeepEqual(data.Products[i], PreviousData.Products[i]) {
-								
-							} else {
-								prodExists := false
-								for k := range data.Products {
-									if reflect.DeepEqual(data.Products[i], PreviousData.Products[k]) {
-										prodExists = true
-									}
+
+						SetMapsEmpty()
+						fmt.Println("Sent product added webhook")
+					}
+				} else if len(data.Products) == 0 && len(PreviousData.Products) > 0 {
+					t.SendProductsRemovedWebhook()
+					t.SendProductsRemovedWebhook2(webhook)
+					fmt.Println("Sent Products removed webhook")
+				} else if len(data.Products) == len(PreviousData.Products) && len(data.Products) != 0 {
+					for i := range data.Products {
+						if reflect.DeepEqual(data.Products[i], PreviousData.Products[i]) {
+
+						} else {
+							prodExists := false
+							for k := range data.Products {
+								if reflect.DeepEqual(data.Products[i], PreviousData.Products[k]) {
+									prodExists = true
 								}
-								if !prodExists {
-									for j := range data.Products[i].Variants {
-										VariantMaps[j] = data.Products[i].Variants[j].ID
-										SizeMaps[j] = data.Products[i].Variants[j].Option1
-									}
-									t.ProductPrice = data.Products[i].Variants[0].Price
-									t.ImageURL = data.Products[i].Images[0].Src
-									t.ProductTitle = data.Products[i].Title
-									t.Handle = data.Products[i].Handle
-									t.SendNewProdWebhook()
-									t.SendNewProdWebhook2(webhook)
-									SetMapsEmpty()
-									fmt.Println("Sent new product webhook")
-								}
-								
 							}
+							if !prodExists {
+								for j := range data.Products[i].Variants {
+									VariantMaps[j] = data.Products[i].Variants[j].ID
+									SizeMaps[j] = data.Products[i].Variants[j].Option1
+								}
+								t.ProductPrice = data.Products[i].Variants[0].Price
+								t.ImageURL = data.Products[i].Images[0].Src
+								t.ProductTitle = data.Products[i].Title
+								t.Handle = data.Products[i].Handle
+								t.SendNewProdWebhook()
+								t.SendNewProdWebhook2(webhook)
+								SetMapsEmpty()
+								fmt.Println("Sent new product webhook")
+							}
+
 						}
 					}
 				}
-				PreviousData = data
 			}
-			if sum > 0 {
-				nonfirststatuscode = resp.StatusCode
-			}
-			sum++
-			time.Sleep(time.Duration(delay)*time.Millisecond)
-			
+			PreviousData = data
 		}
+		if sum > 0 {
+			nonfirststatuscode = resp.StatusCode
+		}
+		sum++
+		time.Sleep(time.Duration(delay) * time.Millisecond)
+
+	}
 }
 
 func (t *Scraper) PwLogin() {
-	loop:
+loop:
 	for {
 		t.RotateProxy()
 		params := url.Values{}
@@ -301,5 +449,4 @@ func (t *Scraper) PwLogin() {
 		}
 	}
 
-	
 }
