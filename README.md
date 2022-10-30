@@ -1,6 +1,6 @@
-# PublicShopifyMonitor
+# Public Shopify Monitor
 
-Welcome to my public shopify monitor!
+Welcome to my public shopify monitor, a project which I used to sell until I decided to open source it.
 
 This was a project I made a while ago.
 
