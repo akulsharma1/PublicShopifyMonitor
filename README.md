@@ -1,6 +1,6 @@
 # Public Shopify Monitor
 
-Welcome to my public shopify monitor, a project which I used to sell until I decided to open source it.
+Welcome to my public shopify monitor, a project which I used to sell until I decided to open source it. Although the code quality isn't the best, it's still a learning resource for beginners.
 
 This was a project I made a while ago.
 
